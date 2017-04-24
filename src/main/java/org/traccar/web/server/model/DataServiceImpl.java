@@ -1104,8 +1104,9 @@ public class DataServiceImpl extends RemoteServiceServlet implements DataService
         ObjectMapper jsonMapper = new ObjectMapper();
         Map<String, Object> result = new HashMap<>();
         try {
-        	boolean traccarVersionBiggerThan_3_9 = false;
-        	
+
+            boolean traccarVersionBiggerThan_3_9 = false;
+
             Class<?> contextClass = Class.forName("org.traccar.Context");
             Method getPermissionsManager = contextClass.getDeclaredMethod("getConnectionManager");
             Object connectionManager = getPermissionsManager.invoke(null);
@@ -1117,24 +1118,24 @@ public class DataServiceImpl extends RemoteServiceServlet implements DataService
             } else {
                 Class<?> backendCommandClass = Class.forName("org.traccar.model.Command");
                 Object backendCommand = backendCommandClass.newInstance();
-                
+
                 Class<?> backendJsonConverterClass = null;
                 try {
                     backendJsonConverterClass = Class.forName("org.traccar.web.JsonConverter");
                 } catch (ClassNotFoundException e) {
-                	try {
-                	backendJsonConverterClass = Class.forName("org.traccar.http.JsonConverter");
-                	}
-                	catch (ClassNotFoundException ee) {
-                		traccarVersionBiggerThan_3_9 = true;
-                	}
+                    try {
+                        backendJsonConverterClass = Class.forName("org.traccar.http.JsonConverter");
+                    }
+                    catch (ClassNotFoundException ee) {
+                        traccarVersionBiggerThan_3_9 = true;
+                    }
                 } 
 
                 Method objectFromJson;
-                
+
                 if (!traccarVersionBiggerThan_3_9)
                 {
-                	try {
+                    try {
                         Class<?> backendFactoryClass = Class.forName("org.traccar.model.Factory");
                         objectFromJson = backendJsonConverterClass.getDeclaredMethod("objectFromJson", Reader.class, backendFactoryClass);
                         backendCommand = objectFromJson.invoke(null, new StringReader(jsonMapper.writeValueAsString(command)), backendCommand);
@@ -1143,39 +1144,34 @@ public class DataServiceImpl extends RemoteServiceServlet implements DataService
                         backendCommand = objectFromJson.invoke(null, new StringReader(jsonMapper.writeValueAsString(command)), backendCommandClass);
                     }
                 } else {
-                	
-                	Class<?> iterateClass = backendCommandClass;
-                	
-                	while (iterateClass != Object.class) {
-            			Field[] fields = iterateClass.getDeclaredFields();
-            			for (Field f : fields) {
-            				boolean accessible = f.isAccessible();
-            				switch (f.getName()) {
-            					case "type":
-            						f.setAccessible(true);
-            						f.set(backendCommand, command.getType().toString());;
-            						f.setAccessible(accessible);
-            						break;
-            					case "deviceId":
-            						f.setAccessible(true);
-            						f.set(backendCommand, command.getDeviceId());
-            						f.setAccessible(accessible);
-            						break;
-            					case "attributes":
-            						f.setAccessible(true);
-            						f.set(backendCommand, command.getAttributes());
-            						f.setAccessible(accessible);
-            						break;
-            				}
-            			}
-            			iterateClass = iterateClass.getSuperclass();
-            		}
-                    
-                    logger.info("reflection info:");
-                    logger.info(command.getType().toString());
+
+                    Class<?> iterateClass = backendCommandClass;
+
+                    while (iterateClass != Object.class) {
+                        Field[] fields = iterateClass.getDeclaredFields();
+                        for (Field f : fields) {
+                            boolean accessible = f.isAccessible();
+                            switch (f.getName()) {
+                            case "type":
+                                f.setAccessible(true);
+                                f.set(backendCommand, command.getType().toString());;
+                                f.setAccessible(accessible);
+                                break;
+                            case "deviceId":
+                                f.setAccessible(true);
+                                f.set(backendCommand, command.getDeviceId());
+                                f.setAccessible(accessible);
+                                break;
+                            case "attributes":
+                                f.setAccessible(true);
+                                f.set(backendCommand, command.getAttributes());
+                                f.setAccessible(accessible);
+                                break;
+                            }
+                        }
+                        iterateClass = iterateClass.getSuperclass();
+                    }
                 }
-                
-                
 
                 Method sendCommand = activeDevice.getClass().getDeclaredMethod("sendCommand", backendCommandClass);
                 sendCommand.invoke(activeDevice, backendCommand);
